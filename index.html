@@ -123,6 +123,8 @@
         fireKillImage.src = './images/火殺.png';
         const ancientSwordImage = new Image();
         ancientSwordImage.src = './images/古錠刀.png';
+        const holeImage = new Image();
+        holeImage.src = './images/Hole.png';
         const hitSound = new Audio('./audio/萬軍取首.mp3');
         const slaughterSound = new Audio('./audio/癲狂屠戮.mp3');
         const flashSound = new Audio('./audio/閃.mp3');
@@ -131,26 +133,6 @@
         const equipSound = new Audio('./audio/equip.mp3');
         const bgm = new Audio('./audio/BGM.mp3');
         bgm.loop = true;
-
-        // 資源載入計數器
-        let resourcesLoaded = 0;
-        const totalResources = 13;
-        function checkResourcesLoaded() {
-            resourcesLoaded++;
-            console.log(`已載入資源數: ${resourcesLoaded}/${totalResources}`);
-            if (resourcesLoaded === totalResources) {
-                console.log('所有資源載入完成，遊戲可開始');
-            }
-        }
-
-        [playerImage, enemyImage, caoAngImage, wineImage, fireKillImage, ancientSwordImage].forEach(img => {
-            img.onerror = () => console.error(`圖片載入失敗: ${img.src}`);
-            img.onload = checkResourcesLoaded;
-        });
-        [hitSound, slaughterSound, flashSound, wineSound, fireKillSound, equipSound, bgm].forEach(audio => {
-            audio.onerror = () => console.error(`音效載入失敗: ${audio.src}`);
-            audio.onloadeddata = checkResourcesLoaded;
-        });
 
         // 主角物件
         const player = {
@@ -210,6 +192,7 @@
             else if (comboCount === 4) comboText += " 四連 天下無敵";
             else if (comboCount >= 5) comboText += " 誅天滅地";
             comboDisplay.textContent = comboText;
+            console.log(`更新 COMBO 顯示: ${comboText}`);
         }
 
         // 更新主角位置
@@ -265,18 +248,13 @@
                 isLarge: isLarge
             };
 
-            const distances = [
-                { x: boundary.minX, y: enemy.y, dist: enemy.x },
-                { x: boundary.maxX, y: enemy.y, dist: boundary.maxX - enemy.x },
-                { x: enemy.x, y: boundary.minY, dist: enemy.y },
-                { x: enemy.x, y: boundary.maxY, dist: boundary.maxY - enemy.y }
-            ];
-            const nearest = distances.reduce((min, curr) => curr.dist < min.dist ? curr : min);
-            enemy.targetX = nearest.x;
-            enemy.targetY = nearest.y;
+            const escapeAngle = Math.random() * Math.PI * 2;
+            const escapeDistance = 1000;
+            enemy.targetX = enemy.x + Math.cos(escapeAngle) * escapeDistance;
+            enemy.targetY = enemy.y + Math.sin(escapeAngle) * escapeDistance;
 
             enemies.push(enemy);
-            console.log(`生成敵人: ${isLarge ? '大沖兒' : '普通沖兒'}, HP: ${enemy.hp}, Size: ${enemy.size}`);
+            console.log(`生成敵人: ${isLarge ? '大沖兒' : '普通沖兒'}, 位置: (${enemy.x}, ${enemy.y})`);
             return holeIndex;
         }
 
@@ -302,17 +280,13 @@
                 size: enemySize
             };
 
-            const distances = [
-                { x: boundary.minX, y: caoAng.y, dist: caoAng.x },
-                { x: boundary.maxX, y: caoAng.y, dist: boundary.maxX - caoAng.x },
-                { x: caoAng.x, y: boundary.minY, dist: caoAng.y },
-                { x: caoAng.x, y: boundary.maxY, dist: boundary.maxY - caoAng.y }
-            ];
-            const nearest = distances.reduce((min, curr) => curr.dist < min.dist ? curr : min);
-            caoAng.targetX = nearest.x;
-            caoAng.targetY = nearest.y;
+            const escapeAngle = Math.random() * Math.PI * 2;
+            const escapeDistance = 1000;
+            caoAng.targetX = caoAng.x + Math.cos(escapeAngle) * escapeDistance;
+            caoAng.targetY = caoAng.y + Math.sin(escapeAngle) * escapeDistance;
 
             caoAngs.push(caoAng);
+            console.log(`生成曹昂, 位置: (${caoAng.x}, ${caoAng.y})`);
         }
 
         // 生成道具
@@ -338,6 +312,7 @@
                 image: itemImage
             };
             items.push(item);
+            console.log(`生成道具: ${itemType}, 位置: (${item.x}, ${item.y})`);
         }
 
         // 更新敵人（沖兒）位置
@@ -372,7 +347,7 @@
                     console.log(`擊中敵人, HP: ${enemy.hp}`);
                     if (enemy.hp <= 0) {
                         enemies.splice(i, 1);
-                        comboCount++; // 增加 COMBO 數
+                        comboCount++;
                         if (wineBuff || fireKillBuff || ancientSwordDurability > 0) {
                             hitSound.play();
                         } else {
@@ -381,7 +356,7 @@
                         let baseScore = enemy.isLarge ? 3 : 1;
                         baseScore += (wineBuff ? 1 : 0) + (fireKillBuff ? 1 : 0);
                         let totalScore = ancientSwordDurability > 0 ? baseScore * 2 : baseScore;
-                        totalScore += comboCount; // 加上 COMBO 數的分數
+                        totalScore += comboCount;
                         score += totalScore;
                         if (wineBuff) wineBuff = false;
                         if (fireKillBuff) fireKillBuff = false;
@@ -425,7 +400,7 @@
                 if (playerDistance < (player.size + caoAng.size) / 2) {
                     caoAngs.splice(i, 1);
                     flashSound.play();
-                    comboCount = 0; // 碰到曹昂，COMBO 歸 0
+                    comboCount = 0;
                     if (wineBuff) wineBuff = false;
                     if (fireKillBuff) fireKillBuff = false;
                     if (ancientSwordDurability > 0) ancientSwordDurability = Math.max(0, ancientSwordDurability - 5);
@@ -468,68 +443,74 @@
             if (fireKillBuff) buffs.push('火殺');
             if (ancientSwordDurability > 0) buffs.push(`古錠刀 (${ancientSwordDurability}%)`);
             buffsDisplay.textContent = `BUFF: ${buffs.length > 0 ? buffs.join(', ') : '無'}`;
+            console.log(`更新 BUFF 顯示: ${buffsDisplay.textContent}`);
         }
 
         // 繪製遊戲畫面
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            ctx.fillStyle = 'black';
-            for (const hole of holes) {
-                ctx.beginPath();
-                ctx.arc(hole.x, hole.y, holeRadius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.closePath();
-            }
+            if (gameActive) {
+                for (const hole of holes) {
+                    if (holeImage.complete) {
+                        ctx.drawImage(holeImage, hole.x - holeRadius, hole.y - holeRadius, holeRadius * 2, holeRadius * 2);
+                    } else {
+                        ctx.fillStyle = 'black';
+                        ctx.beginPath();
+                        ctx.arc(hole.x, hole.y, holeRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.closePath();
+                    }
+                }
 
-            for (const item of items) {
-                if (item.image.complete) {
-                    ctx.drawImage(item.image, item.x - item.size / 2, item.y - item.size / 2, item.size, item.size);
+                for (const item of items) {
+                    if (item.image.complete) {
+                        ctx.drawImage(item.image, item.x - item.size / 2, item.y - item.size / 2, item.size, item.size);
+                    } else {
+                        ctx.fillStyle = 'yellow';
+                        ctx.fillRect(item.x - item.size / 2, item.y - item.size / 2, item.size, item.size);
+                    }
+                }
+
+                for (const enemy of enemies) {
+                    if (enemyImage.complete) {
+                        ctx.drawImage(enemyImage, enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
+                    } else {
+                        ctx.fillStyle = 'green';
+                        ctx.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
+                    }
+                }
+
+                for (const caoAng of caoAngs) {
+                    if (caoAngImage.complete) {
+                        ctx.drawImage(caoAngImage, caoAng.x - caoAng.size / 2, caoAng.y - caoAng.size / 2, caoAng.size, caoAng.size);
+                    } else {
+                        ctx.fillStyle = 'purple';
+                        ctx.fillRect(caoAng.x - caoAng.size / 2, caoAng.y - caoAng.size / 2, caoAng.size, caoAng.size);
+                    }
+                }
+
+                if (playerImage.complete) {
+                    ctx.save();
+                    ctx.translate(player.x, player.y);
+                    if (player.facingRight) {
+                        ctx.scale(-1, 1);
+                    }
+                    ctx.drawImage(playerImage, -player.size / 2, -player.size / 2, player.size, player.size);
+                    ctx.restore();
                 } else {
-                    ctx.fillStyle = 'yellow';
-                    ctx.fillRect(item.x - item.size / 2, item.y - item.size / 2, item.size, item.size);
+                    ctx.fillStyle = 'red';
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, player.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.closePath();
                 }
-            }
-
-            for (const enemy of enemies) {
-                if (enemyImage.complete) {
-                    ctx.drawImage(enemyImage, enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
-                } else {
-                    ctx.fillStyle = 'green';
-                    ctx.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
-                }
-            }
-
-            for (const caoAng of caoAngs) {
-                if (caoAngImage.complete) {
-                    ctx.drawImage(caoAngImage, caoAng.x - caoAng.size / 2, caoAng.y - caoAng.size / 2, caoAng.size, caoAng.size);
-                } else {
-                    ctx.fillStyle = 'purple';
-                    ctx.fillRect(caoAng.x - caoAng.size / 2, caoAng.y - caoAng.size / 2, caoAng.size, caoAng.size);
-                }
-            }
-
-            if (playerImage.complete) {
-                ctx.save();
-                ctx.translate(player.x, player.y);
-                if (player.facingRight) {
-                    ctx.scale(-1, 1);
-                }
-                ctx.drawImage(playerImage, -player.size / 2, -player.size / 2, player.size, player.size);
-                ctx.restore();
-            } else {
-                ctx.beginPath();
-                ctx.arc(player.x, player.y, player.size / 2, 0, Math.PI * 2);
-                ctx.fillStyle = 'red';
-                ctx.fill();
-                ctx.closePath();
             }
         }
 
         // 遊戲主迴圈
         function gameLoop() {
             if (gameActive) {
-                player.moving = true;
                 updatePlayer();
                 updateEnemies();
                 updateCaoAngs();
@@ -546,7 +527,7 @@
 
         // 隨機生成不重疊的洞
         function generateHoles() {
-            const centerArea = { minX: 300, maxX: 500, minY: 300, maxY: 500 };
+            const centerArea = { minX: 250, maxX: 550, minY: 250, maxY: 550 };
             while (holes.length < 3) {
                 const newHole = {
                     x: Math.random() * (centerArea.maxX - centerArea.minX - 2 * holeRadius) + centerArea.minX + holeRadius,
@@ -562,7 +543,10 @@
                         break;
                     }
                 }
-                if (!overlapping) holes.push(newHole);
+                if (!overlapping) {
+                    holes.push(newHole);
+                    console.log(`生成洞: (${newHole.x}, ${newHole.y})`);
+                }
             }
         }
 
@@ -603,12 +587,7 @@
 
         // 開始遊戲
         function startGame() {
-            if (resourcesLoaded < totalResources) {
-                alert('資源尚未載入完成，請稍後再試！');
-                console.log(`資源載入進度: ${resourcesLoaded}/${totalResources}`);
-                return;
-            }
-
+            console.log('點擊開始遊戲');
             menu.style.display = 'none';
             canvas.style.display = 'block';
             scoreDisplay.style.display = 'inline-block';
@@ -631,22 +610,21 @@
             scoreDisplay.textContent = `分數: ${score}`;
             updateBuffDisplay();
             updateComboDisplay();
-            timerDisplay.textContent = `剩餘時間: ${timeLeft}`;
+            timerDisplay.textContent = `剩餘時間: ${Math.ceil(timeLeft)}`;
 
             bgm.play();
-            console.log('遊戲開始');
-            baoAnimation.style.display = 'none';
-            swordAnimation.style.display = 'none';
+            console.log('遊戲開始，生成洞數量: ' + holes.length);
 
             spawnInterval = setInterval(() => {
                 const enemyHoleIndex = spawnEnemy();
                 if (Math.random() < 0.30) spawnCaoAng(enemyHoleIndex);
                 if (Math.random() < 0.20) spawnItem();
 
-                timeLeft--;
-                timerDisplay.textContent = `剩餘時間: ${timeLeft}`;
+                timeLeft -= 0.5;
+                timerDisplay.textContent = `剩餘時間: ${Math.ceil(timeLeft)}`;
+                console.log(`時間更新: ${timeLeft}, 敵人數量: ${enemies.length}, 曹昂數量: ${caoAngs.length}, 道具數量: ${items.length}`);
                 if (timeLeft <= 0) endGame();
-            }, 1000);
+            }, 500);
         }
 
         // 結束遊戲
