@@ -38,6 +38,29 @@
             text-align: center;
             margin-top: 20px;
         }
+        #baoAnimation {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            width: 200px;
+            height: 200px;
+        }
+        #swordAnimation {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            width: 200px;
+            height: 200px;
+            animation: rotate 2s linear infinite;
+        }
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 <body>
@@ -63,6 +86,9 @@
         <button onclick="saveScore()">提交</button>
     </div>
 
+    <img id="baoAnimation" src="./images/大寶.gif" alt="大寶">
+    <img id="swordAnimation" src="./images/古錠刀.png" alt="古錠刀">
+
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -74,6 +100,8 @@
         const leaderboardList = document.getElementById('leaderboardList');
         const nameInput = document.getElementById('nameInput');
         const finalScoreDisplay = document.getElementById('finalScore');
+        const baoAnimation = document.getElementById('baoAnimation');
+        const swordAnimation = document.getElementById('swordAnimation');
 
         // 載入圖片和音效
         const playerImage = new Image();
@@ -99,7 +127,7 @@
 
         // 資源載入計數器
         let resourcesLoaded = 0;
-        const totalResources = 13; // 6 圖片 + 7 音效
+        const totalResources = 13;
         function checkResourcesLoaded() {
             resourcesLoaded++;
             console.log(`已載入資源數: ${resourcesLoaded}/${totalResources}`);
@@ -149,6 +177,9 @@
         let gameActive = false;
         let spawnInterval;
 
+        // 檢測是否為觸控裝置
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
         // 洞的陣列
         const holes = [];
         const holeRadius = 30;
@@ -164,8 +195,6 @@
 
         // 更新主角位置
         function updatePlayer() {
-            if (!player.moving) return;
-
             const dx = player.targetX - player.x;
             const dy = player.targetY - player.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -192,6 +221,7 @@
 
             player.x = Math.max(boundary.minX + player.size / 2, Math.min(boundary.maxX - player.size / 2, player.x));
             player.y = Math.max(boundary.minY + player.size / 2, Math.min(boundary.maxY - player.size / 2, player.y));
+            player.facingRight = player.targetX > player.x;
         }
 
         // 生成敵人（沖兒）
@@ -440,7 +470,7 @@
                     ctx.drawImage(enemyImage, enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
                 } else {
                     ctx.fillStyle = 'green';
-                    ctx.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
+                    ctx.fillRect(enemy.x - enemy.size / 2, enemy.y - item.size / 2, enemy.size, enemy.size);
                 }
             }
 
@@ -473,10 +503,16 @@
         // 遊戲主迴圈
         function gameLoop() {
             if (gameActive) {
+                player.moving = true; // 保持移動狀態
                 updatePlayer();
                 updateEnemies();
                 updateCaoAngs();
                 updateItems();
+                baoAnimation.style.display = 'none';
+                swordAnimation.style.display = 'none';
+            } else {
+                baoAnimation.style.display = 'block';
+                swordAnimation.style.display = 'block';
             }
             draw();
             requestAnimationFrame(gameLoop);
@@ -504,19 +540,40 @@
             }
         }
 
-        // 點擊事件
-        canvas.addEventListener('click', (event) => {
-            if (!gameActive) return;
-            const rect = canvas.getBoundingClientRect();
-            const clickX = event.clientX - rect.left;
-            const clickY = event.clientY - rect.top;
+        // 滑鼠移動事件（PC）
+        if (!isTouchDevice) {
+            canvas.addEventListener('mousemove', (event) => {
+                if (!gameActive) return;
+                const rect = canvas.getBoundingClientRect();
+                player.targetX = Math.max(boundary.minX + player.size / 2, Math.min(boundary.maxX - player.size / 2, event.clientX - rect.left));
+                player.targetY = Math.max(boundary.minY + player.size / 2, Math.min(boundary.maxY - player.size / 2, event.clientY - rect.top));
+                console.log(`滑鼠移動至: (${player.targetX}, ${player.targetY})`);
+            });
+        }
 
-            player.targetX = Math.max(boundary.minX + player.size / 2, Math.min(boundary.maxX - player.size / 2, clickX));
-            player.targetY = Math.max(boundary.minY + player.size / 2, Math.min(boundary.maxY - player.size / 2, clickY));
-            player.moving = true;
-            player.facingRight = player.targetX > player.x;
-            console.log(`點擊移動至: (${player.targetX}, ${player.targetY})`);
-        });
+        // 觸控事件（手機）
+        if (isTouchDevice) {
+            canvas.addEventListener('touchstart', (event) => {
+                if (!gameActive) return;
+                event.preventDefault();
+                const touch = event.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                player.targetX = Math.max(boundary.minX + player.size / 2, Math.min(boundary.maxX - player.size / 2, touch.clientX - rect.left));
+                player.targetY = Math.max(boundary.minY + player.size / 2, Math.min(boundary.maxY - player.size / 2, touch.clientY - rect.top));
+                player.moving = true;
+                console.log(`觸控移動至: (${player.targetX}, ${player.targetY})`);
+            });
+
+            canvas.addEventListener('touchmove', (event) => {
+                if (!gameActive) return;
+                event.preventDefault();
+                const touch = event.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                player.targetX = Math.max(boundary.minX + player.size / 2, Math.min(boundary.maxX - player.size / 2, touch.clientX - rect.left));
+                player.targetY = Math.max(boundary.minY + player.size / 2, Math.min(boundary.maxY - player.size / 2, touch.clientY - rect.top));
+                console.log(`觸控移動至: (${player.targetX}, ${player.targetY})`);
+            });
+        }
 
         // 開始遊戲
         function startGame() {
@@ -549,6 +606,8 @@
 
             bgm.play();
             console.log('遊戲開始');
+            baoAnimation.style.display = 'none';
+            swordAnimation.style.display = 'none';
 
             spawnInterval = setInterval(() => {
                 const enemyHoleIndex = spawnEnemy();
@@ -574,6 +633,8 @@
             bgm.pause();
             bgm.currentTime = 0;
             console.log('遊戲結束');
+            baoAnimation.style.display = 'block';
+            swordAnimation.style.display = 'block';
         }
 
         // 儲存分數到排行榜
@@ -599,12 +660,16 @@
             leaderboardList.innerHTML = leaderboardData.length > 0
                 ? leaderboardData.map((entry, index) => `${index + 1}. ${entry.name}: ${entry.score}`).join('<br>')
                 : '尚無紀錄';
+            baoAnimation.style.display = 'block';
+            swordAnimation.style.display = 'block';
         }
 
         // 返回主選單
         function backToMenu() {
             leaderboard.style.display = 'none';
             menu.style.display = 'block';
+            baoAnimation.style.display = 'block';
+            swordAnimation.style.display = 'block';
         }
 
         // 初始化並啟動遊戲主迴圈
