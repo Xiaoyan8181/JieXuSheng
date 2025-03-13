@@ -22,7 +22,7 @@
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
-            white-space: pre-line; /* 支援換行 */
+            white-space: pre-line;
             display: none;
         }
         #title {
@@ -48,10 +48,33 @@
             margin-left: auto;
             margin-right: auto;
         }
-        #leaderboard, #nameInput {
+        #leaderboard, #nameInput, #instructions {
             display: none;
             text-align: center;
             margin-top: 20px;
+        }
+        #instructions img {
+            display: block;
+            margin: 10px auto;
+            width: 80px;
+            height: 80px;
+        }
+        #instructions p {
+            font-size: 18px;
+            margin: 5px 0;
+        }
+        #instructions .hp {
+            font-size: 16px;
+            margin-top: -5px;
+        }
+        #instructions .category {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        #instructions .item-category {
+            font-size: 24px;
+            margin: 20px 0;
+            animation: scalePulse 3s ease-in-out infinite; /* 道具類放大縮小效果 */
         }
         #baoAnimation {
             position: fixed;
@@ -73,6 +96,10 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        @keyframes scalePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
     </style>
 </head>
 <body>
@@ -86,6 +113,7 @@
     <div id="menu">
         <button onclick="startGame()">開始遊戲</button>
         <button onclick="showLeaderboard()">排行榜</button>
+        <button onclick="showInstructions()">遊戲說明</button>
         <button onclick="window.close()">離開</button>
     </div>
     <div id="leaderboard">
@@ -97,6 +125,36 @@
         <h2>遊戲結束！你的分數: <span id="finalScore"></span></h2>
         <input type="text" id="playerName" placeholder="輸入你的名稱" maxlength="20">
         <button onclick="saveScore()">提交</button>
+    </div>
+    <div id="instructions">
+        <h2>遊戲說明</h2>
+        <p class="category">~角色類~</p>
+        <img src="./images/大寶.gif" alt="大寶">
+        <p>這是你! 你可以操控他追擊沖兒獲得積分!</p>
+        <img src="./images/沖兒.png" alt="沖兒">
+        <p>經典沖兒! 擊殺可獲得1積分!</p>
+        <p class="hp">HP2</p>
+        <img src="./images/沖兒.png" alt="大沖兒" style="width: 120px; height: 120px;">
+        <p>大沖兒: 較大的沖兒! 擊殺可獲得3積分!</p>
+        <p class="hp">HP5</p>
+        <img src="./images/曹昂.png" alt="曹昂">
+        <p>昂寶! 若想擊殺會被閃!</p>
+        <p class="hp">HP4</p>
+        <img src="./images/小虎.png" alt="小虎">
+        <p>小虎! 千萬別碰到她! 不然就要擊殺她才能觸碰其他人! 擊殺可獲得1積分!</p>
+        <p class="hp">HP10</p>
+        <img src="./images/謀諸葛.png" alt="謀諸葛">
+        <p>謀諸葛! 碰到會扣減積分!</p>
+        <p class="hp">HP50</p>
+        <p>COMBO數會加分 但昂寶和謀諸葛會斷COMBO!</p>
+        <p class="item-category">~道具類~</p>
+        <img src="./images/酒.png" alt="酒">
+        <p>酒: 讓你下一次的傷害+1! 並且擊殺的積分+1!</p>
+        <img src="./images/火殺.png" alt="火殺">
+        <p>火殺: 獲得火焰附魔2次!(可疊加) 讓你傷害+1! 並且擊殺的積分+1!</p>
+        <img src="./images/古錠刀.png" alt="古錠刀">
+        <p>古錠刀: 獲得古錠刀! 讓你傷害翻倍! 並且擊殺的積分翻倍! 每次使用耐久-5%</p>
+        <button onclick="backToMenu()">返回</button>
     </div>
 
     <img id="baoAnimation" src="./images/大寶.gif" alt="大寶">
@@ -113,6 +171,7 @@
         const leaderboard = document.getElementById('leaderboard');
         const leaderboardList = document.getElementById('leaderboardList');
         const nameInput = document.getElementById('nameInput');
+        const instructions = document.getElementById('instructions');
         const finalScoreDisplay = document.getElementById('finalScore');
         const baoAnimation = document.getElementById('baoAnimation');
         const swordAnimation = document.getElementById('swordAnimation');
@@ -173,15 +232,15 @@
             return attack;
         }
 
-        // 更新 COMBO 顯示（分行顯示）
+        // 更新 COMBO 顯示
         function updateComboDisplay() {
-            let comboText = `COMBO: ${comboCount}\n`; // COMBO 數值一行
+            let comboText = `COMBO: ${comboCount}\n`;
             if (comboCount === 1) comboText += "一破 臥龍出山";
             else if (comboCount === 2) comboText += "雙連 一戰成名";
             else if (comboCount === 3) comboText += "三連 舉世皆驚";
             else if (comboCount === 4) comboText += "四連 天下無敵";
             else if (comboCount >= 5) comboText += "誅天滅地";
-            else comboText += ""; // COMBO 為 0 時不顯示播報
+            else comboText += "";
             comboDisplay.textContent = comboText;
         }
 
@@ -238,7 +297,8 @@
                 holeIndex: holeIndex,
                 hp: isLarge ? 5 : 2,
                 maxHp: isLarge ? 5 : 2,
-                isLarge: isLarge
+                isLarge: isLarge,
+                facingRight: false // 新增方向屬性
             };
 
             const escapeAngle = Math.random() * Math.PI * 2;
@@ -275,7 +335,8 @@
                     size: enemySize,
                     hp: 4,
                     maxHp: 4,
-                    type: 'caoAng'
+                    type: 'caoAng',
+                    facingRight: false
                 };
                 const escapeAngle = Math.random() * Math.PI * 2;
                 const escapeDistance = 1000;
@@ -296,7 +357,8 @@
                     hp: 10,
                     maxHp: 10,
                     type: 'tiger',
-                    wandering: false
+                    wandering: false,
+                    facingRight: false
                 };
                 const escapeAngle = Math.random() * Math.PI * 2;
                 const escapeDistance = 1000;
@@ -316,7 +378,8 @@
                     size: enemySize,
                     hp: 50,
                     maxHp: 50,
-                    type: 'zhuge'
+                    type: 'zhuge',
+                    facingRight: false
                 };
                 const escapeAngle = Math.random() * Math.PI * 2;
                 const escapeDistance = 1000;
@@ -347,7 +410,8 @@
                 size: itemSize,
                 type: itemType,
                 image: itemImage,
-                rotation: 0
+                rotation: 0,
+                scale: 1 // 新增縮放屬性
             };
             items.push(item);
         }
@@ -393,6 +457,7 @@
                 enemy.speed = Math.min(enemy.speed + enemy.acceleration, enemy.maxSpeed);
                 enemy.x += Math.cos(angle) * enemy.speed;
                 enemy.y += Math.sin(angle) * enemy.speed;
+                enemy.facingRight = enemy.targetX > enemy.x;
 
                 if (playerDistance < (player.size + enemy.size) / 2 && player.collisionCooldown <= 0 && (!boundTiger || boundTiger.hp <= 0)) {
                     enemy.hp -= calculateAttack();
@@ -457,6 +522,7 @@
                 caoAng.speed = Math.min(caoAng.speed + caoAng.acceleration, caoAng.maxSpeed);
                 caoAng.x += Math.cos(angle) * caoAng.speed;
                 caoAng.y += Math.sin(angle) * caoAng.speed;
+                caoAng.facingRight = caoAng.targetX > caoAng.x;
 
                 const playerDx = player.x - caoAng.x;
                 const playerDy = player.y - caoAng.y;
@@ -560,6 +626,7 @@
                 tiger.speed = Math.min(tiger.speed + tiger.acceleration, tiger.maxSpeed);
                 tiger.x += Math.cos(angle) * tiger.speed;
                 tiger.y += Math.sin(angle) * tiger.speed;
+                tiger.facingRight = tiger.targetX > tiger.x;
             }
         }
 
@@ -586,6 +653,7 @@
                 zhuge.speed = Math.min(zhuge.speed + zhuge.acceleration, zhuge.maxSpeed);
                 zhuge.x += Math.cos(angle) * zhuge.speed;
                 zhuge.y += Math.sin(angle) * zhuge.speed;
+                zhuge.facingRight = zhuge.targetX > zhuge.x;
 
                 const playerDx = player.x - zhuge.x;
                 const playerDy = player.y - zhuge.y;
@@ -611,8 +679,9 @@
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
                 item.rotation += 0.05;
+                item.scale = 1 + 0.1 * Math.sin(Date.now() * 0.001); // 緩慢放大縮小效果
 
-                if (distance < (player.size + item.size) / 2) {
+                if (distance < (player.size + item.size * item.scale) / 2) {
                     items.splice(i, 1);
                     if (item.type === 'wine') {
                         wineBuff = true;
@@ -629,7 +698,7 @@
             }
         }
 
-        // 更新 BUFF 顯示（換行）
+        // 更新 BUFF 顯示
         function updateBuffDisplay() {
             let buffs = [];
             if (wineBuff) buffs.push('酒');
@@ -674,6 +743,7 @@
                         ctx.save();
                         ctx.translate(item.x, item.y);
                         ctx.rotate(item.rotation);
+                        ctx.scale(item.scale, item.scale); // 應用縮放
                         ctx.drawImage(item.image, -item.size / 2, -item.size / 2, item.size, item.size);
                         ctx.restore();
                     } else {
@@ -684,7 +754,11 @@
 
                 for (const enemy of enemies) {
                     if (enemyImage.complete) {
-                        ctx.drawImage(enemyImage, enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
+                        ctx.save();
+                        ctx.translate(enemy.x, enemy.y);
+                        if (enemy.facingRight) ctx.scale(-1, 1); // 左右翻轉
+                        ctx.drawImage(enemyImage, -enemy.size / 2, -enemy.size / 2, enemy.size, enemy.size);
+                        ctx.restore();
                     } else {
                         ctx.fillStyle = 'green';
                         ctx.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
@@ -694,7 +768,11 @@
 
                 for (const caoAng of caoAngs) {
                     if (caoAngImage.complete) {
-                        ctx.drawImage(caoAngImage, caoAng.x - caoAng.size / 2, caoAng.y - caoAng.size / 2, caoAng.size, caoAng.size);
+                        ctx.save();
+                        ctx.translate(caoAng.x, caoAng.y);
+                        if (caoAng.facingRight) ctx.scale(-1, 1);
+                        ctx.drawImage(caoAngImage, -caoAng.size / 2, -caoAng.size / 2, caoAng.size, caoAng.size);
+                        ctx.restore();
                     } else {
                         ctx.fillStyle = 'purple';
                         ctx.fillRect(caoAng.x - caoAng.size / 2, caoAng.y - caoAng.size / 2, caoAng.size, caoAng.size);
@@ -704,7 +782,11 @@
 
                 for (const tiger of tigers) {
                     if (tigerImage.complete) {
-                        ctx.drawImage(tigerImage, tiger.x - tiger.size / 2, tiger.y - tiger.size / 2, tiger.size, tiger.size);
+                        ctx.save();
+                        ctx.translate(tiger.x, tiger.y);
+                        if (tiger.facingRight) ctx.scale(-1, 1);
+                        ctx.drawImage(tigerImage, -tiger.size / 2, -tiger.size / 2, tiger.size, tiger.size);
+                        ctx.restore();
                     } else {
                         ctx.fillStyle = 'orange';
                         ctx.fillRect(tiger.x - tiger.size / 2, tiger.y - tiger.size / 2, tiger.size, tiger.size);
@@ -714,7 +796,11 @@
 
                 for (const zhuge of zhuges) {
                     if (zhugeImage.complete) {
-                        ctx.drawImage(zhugeImage, zhuge.x - zhuge.size / 2, zhuge.y - zhuge.size / 2, zhuge.size, zhuge.size);
+                        ctx.save();
+                        ctx.translate(zhuge.x, zhuge.y);
+                        if (zhuge.facingRight) ctx.scale(-1, 1);
+                        ctx.drawImage(zhugeImage, -zhuge.size / 2, -zhuge.size / 2, zhuge.size, zhuge.size);
+                        ctx.restore();
                     } else {
                         ctx.fillStyle = 'blue';
                         ctx.fillRect(zhuge.x - zhuge.size / 2, zhuge.y - zhuge.size / 2, zhuge.size, zhuge.size);
@@ -819,7 +905,7 @@
             scoreDisplay.style.display = 'inline-block';
             buffsDisplay.style.display = 'inline-block';
             timerDisplay.style.display = 'inline-block';
-            comboDisplay.style.display = 'block'; // 改為 block 以支援換行
+            comboDisplay.style.display = 'block';
 
             score = 0;
             wineBuff = false;
@@ -898,9 +984,19 @@
             swordAnimation.style.display = 'block';
         }
 
+        // 顯示遊戲說明
+        function showInstructions() {
+            console.log("Showing instructions...");
+            menu.style.display = 'none';
+            instructions.style.display = 'block';
+            baoAnimation.style.display = 'block';
+            swordAnimation.style.display = 'block';
+        }
+
         // 返回主選單
         function backToMenu() {
             leaderboard.style.display = 'none';
+            instructions.style.display = 'none';
             menu.style.display = 'block';
             baoAnimation.style.display = 'block';
             swordAnimation.style.display = 'block';
