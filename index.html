@@ -9,16 +9,21 @@
             float: left;
             display: none;
         }
-        #score, #buffs, #timer, #combo {
+        #score, #buffs, #timer {
             font-size: 24px;
             margin-left: 20px;
             display: inline-block;
             display: none;
         }
         #combo {
+            font-size: 24px;
             position: fixed;
-            top: 10px;
-            right: 10px;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            white-space: pre-line; /* 支援換行 */
+            display: none;
         }
         #title {
             text-align: center;
@@ -116,6 +121,8 @@
         const playerImage = new Image(); playerImage.src = './images/大寶.gif';
         const enemyImage = new Image(); enemyImage.src = './images/沖兒.png';
         const caoAngImage = new Image(); caoAngImage.src = './images/曹昂.png';
+        const tigerImage = new Image(); tigerImage.src = './images/小虎.png';
+        const zhugeImage = new Image(); zhugeImage.src = './images/謀諸葛.png';
         const wineImage = new Image(); wineImage.src = './images/酒.png';
         const fireKillImage = new Image(); fireKillImage.src = './images/火殺.png';
         const ancientSwordImage = new Image(); ancientSwordImage.src = './images/古錠刀.png';
@@ -126,6 +133,8 @@
         const wineSound = new Audio('./audio/酒.mp3');
         const fireKillSound = new Audio('./audio/火殺.mp3');
         const equipSound = new Audio('./audio/equip.mp3');
+        const tigerSound = new Audio('./audio/先殺我吧.mp3');
+        const zhugeSound = new Audio('./audio/知汝欲行此技.mp3');
         const bgm = new Audio('./audio/BGM.mp3');
         const minusOneSound = new Audio('./audio/-1.mp3');
         const minusTwoSound = new Audio('./audio/-2.mp3');
@@ -135,7 +144,8 @@
         // 主角物件
         const player = {
             x: 400, y: 400, speed: 0, maxSpeed: 8, acceleration: 0.1, deceleration: 0.1,
-            targetX: 400, targetY: 400, size: 80, moving: false, facingRight: false
+            targetX: 400, targetY: 400, size: 80, moving: false, facingRight: false,
+            collisionCooldown: 0
         };
 
         // 邊界範圍
@@ -143,24 +153,35 @@
 
         // 分數、BUFF 和 COMBO 狀態
         let score = 0, wineBuff = false, fireKillBuff = 0, ancientSwordDurability = 0,
-            comboCount = 0, timeLeft = 60, gameActive = false, spawnInterval;
+            comboCount = 0, timeLeft = 60, gameActive = false, spawnInterval,
+            boundTiger = null;
 
         // 檢測是否為觸控裝置
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
         // 洞、敵人和道具陣列
         const holes = [], holeRadius = 30;
-        const enemies = [], caoAngs = [], enemySize = 45;
+        const enemies = [], caoAngs = [], tigers = [], zhuges = [], enemySize = 45;
         const items = [], itemSize = 45;
 
-        // 更新 COMBO 顯示
+        // 計算攻擊力
+        function calculateAttack() {
+            let attack = 2;
+            if (wineBuff) attack += 1;
+            if (fireKillBuff > 0) attack += 1;
+            if (ancientSwordDurability > 0) attack *= 2;
+            return attack;
+        }
+
+        // 更新 COMBO 顯示（分行顯示）
         function updateComboDisplay() {
-            let comboText = `COMBO: ${comboCount}`;
-            if (comboCount === 1) comboText += " 一破 臥龍出山";
-            else if (comboCount === 2) comboText += " 雙連 一戰成名";
-            else if (comboCount === 3) comboText += " 三連 舉世皆驚";
-            else if (comboCount === 4) comboText += " 四連 天下無敵";
-            else if (comboCount >= 5) comboText += " 誅天滅地";
+            let comboText = `COMBO: ${comboCount}\n`; // COMBO 數值一行
+            if (comboCount === 1) comboText += "一破 臥龍出山";
+            else if (comboCount === 2) comboText += "雙連 一戰成名";
+            else if (comboCount === 3) comboText += "三連 舉世皆驚";
+            else if (comboCount === 4) comboText += "四連 天下無敵";
+            else if (comboCount >= 5) comboText += "誅天滅地";
+            else comboText += ""; // COMBO 為 0 時不顯示播報
             comboDisplay.textContent = comboText;
         }
 
@@ -193,6 +214,8 @@
             player.x = Math.max(boundary.minX + player.size / 2, Math.min(boundary.maxX - player.size / 2, player.x));
             player.y = Math.max(boundary.minY + player.size / 2, Math.min(boundary.maxY - player.size / 2, player.y));
             player.facingRight = player.targetX > player.x;
+
+            if (player.collisionCooldown > 0) player.collisionCooldown -= 1000 / 60;
         }
 
         // 生成敵人（沖兒）
@@ -213,7 +236,8 @@
                 targetY: 0,
                 size: isLarge ? enemySize * 2 : enemySize,
                 holeIndex: holeIndex,
-                hp: isLarge ? 2 : 1,
+                hp: isLarge ? 5 : 2,
+                maxHp: isLarge ? 5 : 2,
                 isLarge: isLarge
             };
 
@@ -226,8 +250,8 @@
             return holeIndex;
         }
 
-        // 生成曹昂
-        function spawnCaoAng(excludeHoleIndex) {
+        // 生成其他角色（曹昂、小虎、謀諸葛）
+        function spawnOtherCharacter(excludeHoleIndex) {
             let holeIndex;
             do {
                 holeIndex = Math.floor(Math.random() * holes.length);
@@ -236,24 +260,70 @@
             const hole = holes[holeIndex];
             const angle = Math.random() * Math.PI * 2;
             const spawnDistance = holeRadius + enemySize / 2;
-            const caoAng = {
-                x: hole.x + Math.cos(angle) * spawnDistance,
-                y: hole.y + Math.sin(angle) * spawnDistance,
-                speed: 0,
-                maxSpeed: 2.5,
-                acceleration: 0.1,
-                delay: 2000,
-                targetX: 0,
-                targetY: 0,
-                size: enemySize
-            };
 
-            const escapeAngle = Math.random() * Math.PI * 2;
-            const escapeDistance = 1000;
-            caoAng.targetX = caoAng.x + Math.cos(escapeAngle) * escapeDistance;
-            caoAng.targetY = caoAng.y + Math.sin(escapeAngle) * escapeDistance;
-
-            caoAngs.push(caoAng);
+            const rand = Math.random();
+            if (rand < 0.95) {
+                const caoAng = {
+                    x: hole.x + Math.cos(angle) * spawnDistance,
+                    y: hole.y + Math.sin(angle) * spawnDistance,
+                    speed: 0,
+                    maxSpeed: 2.5,
+                    acceleration: 0.1,
+                    delay: 2000,
+                    targetX: 0,
+                    targetY: 0,
+                    size: enemySize,
+                    hp: 4,
+                    maxHp: 4,
+                    type: 'caoAng'
+                };
+                const escapeAngle = Math.random() * Math.PI * 2;
+                const escapeDistance = 1000;
+                caoAng.targetX = caoAng.x + Math.cos(escapeAngle) * escapeDistance;
+                caoAng.targetY = caoAng.y + Math.sin(escapeAngle) * escapeDistance;
+                caoAngs.push(caoAng);
+            } else if (rand < 0.98) {
+                const tiger = {
+                    x: hole.x + Math.cos(angle) * spawnDistance,
+                    y: hole.y + Math.sin(angle) * spawnDistance,
+                    speed: 0,
+                    maxSpeed: 1,
+                    acceleration: 0.1,
+                    delay: 2000,
+                    targetX: 0,
+                    targetY: 0,
+                    size: enemySize,
+                    hp: 10,
+                    maxHp: 10,
+                    type: 'tiger',
+                    wandering: false
+                };
+                const escapeAngle = Math.random() * Math.PI * 2;
+                const escapeDistance = 1000;
+                tiger.targetX = tiger.x + Math.cos(escapeAngle) * escapeDistance;
+                tiger.targetY = tiger.y + Math.sin(escapeAngle) * escapeDistance;
+                tigers.push(tiger);
+            } else {
+                const zhuge = {
+                    x: hole.x + Math.cos(angle) * spawnDistance,
+                    y: hole.y + Math.sin(angle) * spawnDistance,
+                    speed: 0,
+                    maxSpeed: 1,
+                    acceleration: 0.1,
+                    delay: 2000,
+                    targetX: 0,
+                    targetY: 0,
+                    size: enemySize,
+                    hp: 50,
+                    maxHp: 50,
+                    type: 'zhuge'
+                };
+                const escapeAngle = Math.random() * Math.PI * 2;
+                const escapeDistance = 1000;
+                zhuge.targetX = zhuge.x + Math.cos(escapeAngle) * escapeDistance;
+                zhuge.targetY = zhuge.y + Math.sin(escapeAngle) * escapeDistance;
+                zhuges.push(zhuge);
+            }
         }
 
         // 生成道具
@@ -276,7 +346,8 @@
                 y: Math.random() * (boundary.maxY - itemSize) + itemSize / 2,
                 size: itemSize,
                 type: itemType,
-                image: itemImage
+                image: itemImage,
+                rotation: 0
             };
             items.push(item);
         }
@@ -323,13 +394,13 @@
                 enemy.x += Math.cos(angle) * enemy.speed;
                 enemy.y += Math.sin(angle) * enemy.speed;
 
-                if (playerDistance < (player.size + enemy.size) / 2) {
-                    enemy.hp--;
+                if (playerDistance < (player.size + enemy.size) / 2 && player.collisionCooldown <= 0 && (!boundTiger || boundTiger.hp <= 0)) {
+                    enemy.hp -= calculateAttack();
+                    player.collisionCooldown = 500;
                     if (enemy.hp <= 0) {
                         enemies.splice(i, 1);
                         comboCount++;
 
-                        // 根據 BUFF 狀態播放音效
                         if (ancientSwordDurability > 0) {
                             new Audio(hitSound.src).play();
                             if (fireKillBuff > 0) new Audio(fireMinusTwoSound.src).play();
@@ -390,16 +461,143 @@
                 const playerDx = player.x - caoAng.x;
                 const playerDy = player.y - caoAng.y;
                 const playerDistance = Math.sqrt(playerDx * playerDx + playerDy * playerDy);
-                if (playerDistance < (player.size + caoAng.size) / 2) {
-                    caoAngs.splice(i, 1);
-                    const sound = new Audio(flashSound.src);
-                    sound.play();
+                if (playerDistance < (player.size + caoAng.size) / 2 && player.collisionCooldown <= 0 && (!boundTiger || boundTiger.hp <= 0)) {
+                    caoAng.hp -= calculateAttack();
+                    player.collisionCooldown = 500;
+                    if (caoAng.hp <= 0) {
+                        caoAngs.splice(i, 1);
+                        new Audio(flashSound.src).play();
+                        comboCount = 0;
+                        if (wineBuff) wineBuff = false;
+                        if (fireKillBuff > 0) fireKillBuff = Math.max(0, fireKillBuff - 1);
+                        if (ancientSwordDurability > 0) ancientSwordDurability = Math.max(0, ancientSwordDurability - 5);
+                        updateBuffDisplay();
+                        updateComboDisplay();
+                    }
+                }
+            }
+        }
+
+        // 更新小虎位置
+        function updateTigers() {
+            for (let i = tigers.length - 1; i >= 0; i--) {
+                const tiger = tigers[i];
+
+                if (tiger.delay > 0) {
+                    tiger.delay -= 1000 / 60;
+                    continue;
+                }
+
+                const dx = tiger.targetX - tiger.x;
+                const dy = tiger.targetY - tiger.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 1 || tiger.x < boundary.minX || tiger.x > boundary.maxX || tiger.y < boundary.minY || tiger.y > boundary.maxY) {
+                    if (!tiger.wandering) {
+                        tiger.targetX = Math.random() * (boundary.maxX - tiger.size) + tiger.size / 2;
+                        tiger.targetY = Math.random() * (boundary.maxY - tiger.size) + tiger.size / 2;
+                        tiger.wandering = true;
+                    }
+                }
+
+                const playerDx = player.x - tiger.x;
+                const playerDy = player.y - tiger.y;
+                const playerDistance = Math.sqrt(playerDx * playerDx + playerDy * playerDy);
+
+                if (playerDistance < (player.size + tiger.size) / 2 && player.collisionCooldown <= 0) {
+                    if (!boundTiger) {
+                        boundTiger = tiger;
+                        new Audio(tigerSound.src).play();
+                    }
+
+                    if (boundTiger === tiger) {
+                        tiger.hp -= calculateAttack();
+                        player.collisionCooldown = 500;
+                        new Audio(tigerSound.src).play();
+                        if (!tiger.wandering) {
+                            tiger.targetX = Math.random() * (boundary.maxX - tiger.size) + tiger.size / 2;
+                            tiger.targetY = Math.random() * (boundary.maxY - tiger.size) + tiger.size / 2;
+                            tiger.wandering = true;
+                        }
+
+                        if (tiger.hp <= 0) {
+                            tigers.splice(i, 1);
+                            if (boundTiger === tiger) boundTiger = null;
+                            comboCount++;
+                            let baseScore = 1;
+                            baseScore += (wineBuff ? 1 : 0) + (fireKillBuff > 0 ? 1 : 0);
+                            let totalScore = ancientSwordDurability > 0 ? baseScore * 2 : baseScore;
+                            totalScore += comboCount;
+                            score += totalScore;
+
+                            if (ancientSwordDurability > 0) {
+                                new Audio(hitSound.src).play();
+                                if (fireKillBuff > 0) new Audio(fireMinusTwoSound.src).play();
+                                else new Audio(minusTwoSound.src).play();
+                            } else if (wineBuff && fireKillBuff > 0) {
+                                new Audio(fireMinusTwoSound.src).play();
+                                new Audio(hitSound.src).play();
+                            } else if (wineBuff) {
+                                new Audio(minusTwoSound.src).play();
+                                new Audio(slaughterSound.src).play();
+                            } else if (fireKillBuff > 0) {
+                                new Audio(fireMinusTwoSound.src).play();
+                                new Audio(slaughterSound.src).play();
+                            } else {
+                                new Audio(minusOneSound.src).play();
+                            }
+                        }
+                        if (wineBuff) wineBuff = false;
+                        if (fireKillBuff > 0) fireKillBuff = Math.max(0, fireKillBuff - 1);
+                        if (ancientSwordDurability > 0) ancientSwordDurability = Math.max(0, ancientSwordDurability - 5);
+                        updateBuffDisplay();
+                        updateComboDisplay();
+                        scoreDisplay.textContent = `分數: ${score}`;
+                    }
+                }
+
+                const angle = Math.atan2(dy, dx);
+                tiger.speed = Math.min(tiger.speed + tiger.acceleration, tiger.maxSpeed);
+                tiger.x += Math.cos(angle) * tiger.speed;
+                tiger.y += Math.sin(angle) * tiger.speed;
+            }
+        }
+
+        // 更新謀諸葛位置
+        function updateZhuges() {
+            for (let i = zhuges.length - 1; i >= 0; i--) {
+                const zhuge = zhuges[i];
+
+                if (zhuge.delay > 0) {
+                    zhuge.delay -= 1000 / 60;
+                    continue;
+                }
+
+                const dx = zhuge.targetX - zhuge.x;
+                const dy = zhuge.targetY - zhuge.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 1 || zhuge.x < boundary.minX || zhuge.x > boundary.maxX || zhuge.y < boundary.minY || zhuge.y > boundary.maxY) {
+                    zhuges.splice(i, 1);
+                    continue;
+                }
+
+                const angle = Math.atan2(dy, dx);
+                zhuge.speed = Math.min(zhuge.speed + zhuge.acceleration, zhuge.maxSpeed);
+                zhuge.x += Math.cos(angle) * zhuge.speed;
+                zhuge.y += Math.sin(angle) * zhuge.speed;
+
+                const playerDx = player.x - zhuge.x;
+                const playerDy = player.y - zhuge.y;
+                const playerDistance = Math.sqrt(playerDx * playerDx + playerDy * playerDy);
+                if (playerDistance < (player.size + zhuge.size) / 2 && player.collisionCooldown <= 0 && (!boundTiger || boundTiger.hp <= 0)) {
+                    zhuges.splice(i, 1);
+                    player.collisionCooldown = 500;
+                    new Audio(zhugeSound.src).play();
                     comboCount = 0;
-                    if (wineBuff) wineBuff = false;
-                    if (fireKillBuff > 0) fireKillBuff = Math.max(0, fireKillBuff - 1);
-                    if (ancientSwordDurability > 0) ancientSwordDurability = Math.max(0, ancientSwordDurability - 5);
-                    updateBuffDisplay();
+                    score = Math.max(0, score - 5);
                     updateComboDisplay();
+                    scoreDisplay.textContent = `分數: ${score}`;
                 }
             }
         }
@@ -412,20 +610,19 @@
                 const dy = player.y - item.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
+                item.rotation += 0.05;
+
                 if (distance < (player.size + item.size) / 2) {
                     items.splice(i, 1);
                     if (item.type === 'wine') {
                         wineBuff = true;
-                        const sound = new Audio(wineSound.src);
-                        sound.play();
+                        new Audio(wineSound.src).play();
                     } else if (item.type === 'fireKill') {
-                        fireKillBuff += 2; // 火殺次數增加 2
-                        const sound = new Audio(fireKillSound.src);
-                        sound.play();
+                        fireKillBuff += 2;
+                        new Audio(fireKillSound.src).play();
                     } else if (item.type === 'ancientSword') {
                         ancientSwordDurability = 100;
-                        const sound = new Audio(equipSound.src);
-                        sound.play();
+                        new Audio(equipSound.src).play();
                     }
                     updateBuffDisplay();
                 }
@@ -439,6 +636,20 @@
             if (fireKillBuff > 0) buffs.push(`火殺 (${fireKillBuff} 次)`);
             if (ancientSwordDurability > 0) buffs.push(`古錠刀 (${ancientSwordDurability}%)`);
             buffsDisplay.innerHTML = buffs.length > 0 ? `BUFF:<br>${buffs.join('<br>')}` : 'BUFF: 無';
+        }
+
+        // 繪製血條
+        function drawHealthBar(x, y, size, hp, maxHp) {
+            const barWidth = size;
+            const barHeight = 5;
+            const healthRatio = hp / maxHp;
+            const healthWidth = barWidth * healthRatio;
+
+            ctx.fillStyle = 'gray';
+            ctx.fillRect(x - barWidth / 2, y + size / 2 + 5, barWidth, barHeight);
+
+            ctx.fillStyle = healthRatio > 0.5 ? 'green' : healthRatio > 0.2 ? 'yellow' : 'red';
+            ctx.fillRect(x - barWidth / 2, y + size / 2 + 5, healthWidth, barHeight);
         }
 
         // 繪製遊戲畫面
@@ -460,7 +671,11 @@
 
                 for (const item of items) {
                     if (item.image.complete) {
-                        ctx.drawImage(item.image, item.x - item.size / 2, item.y - item.size / 2, item.size, item.size);
+                        ctx.save();
+                        ctx.translate(item.x, item.y);
+                        ctx.rotate(item.rotation);
+                        ctx.drawImage(item.image, -item.size / 2, -item.size / 2, item.size, item.size);
+                        ctx.restore();
                     } else {
                         ctx.fillStyle = 'yellow';
                         ctx.fillRect(item.x - item.size / 2, item.y - item.size / 2, item.size, item.size);
@@ -474,6 +689,7 @@
                         ctx.fillStyle = 'green';
                         ctx.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
                     }
+                    drawHealthBar(enemy.x, enemy.y, enemy.size, enemy.hp, enemy.maxHp);
                 }
 
                 for (const caoAng of caoAngs) {
@@ -483,6 +699,27 @@
                         ctx.fillStyle = 'purple';
                         ctx.fillRect(caoAng.x - caoAng.size / 2, caoAng.y - caoAng.size / 2, caoAng.size, caoAng.size);
                     }
+                    drawHealthBar(caoAng.x, caoAng.y, caoAng.size, caoAng.hp, caoAng.maxHp);
+                }
+
+                for (const tiger of tigers) {
+                    if (tigerImage.complete) {
+                        ctx.drawImage(tigerImage, tiger.x - tiger.size / 2, tiger.y - tiger.size / 2, tiger.size, tiger.size);
+                    } else {
+                        ctx.fillStyle = 'orange';
+                        ctx.fillRect(tiger.x - tiger.size / 2, tiger.y - tiger.size / 2, tiger.size, tiger.size);
+                    }
+                    drawHealthBar(tiger.x, tiger.y, tiger.size, tiger.hp, tiger.maxHp);
+                }
+
+                for (const zhuge of zhuges) {
+                    if (zhugeImage.complete) {
+                        ctx.drawImage(zhugeImage, zhuge.x - zhuge.size / 2, zhuge.y - zhuge.size / 2, zhuge.size, zhuge.size);
+                    } else {
+                        ctx.fillStyle = 'blue';
+                        ctx.fillRect(zhuge.x - zhuge.size / 2, zhuge.y - zhuge.size / 2, zhuge.size, zhuge.size);
+                    }
+                    drawHealthBar(zhuge.x, zhuge.y, zhuge.size, zhuge.hp, zhuge.maxHp);
                 }
 
                 if (playerImage.complete) {
@@ -507,6 +744,8 @@
                 updatePlayer();
                 updateEnemies();
                 updateCaoAngs();
+                updateTigers();
+                updateZhuges();
                 updateItems();
                 baoAnimation.style.display = 'none';
                 swordAnimation.style.display = 'none';
@@ -574,35 +813,39 @@
 
         // 開始遊戲
         function startGame() {
+            console.log("Starting game...");
             menu.style.display = 'none';
             canvas.style.display = 'block';
             scoreDisplay.style.display = 'inline-block';
             buffsDisplay.style.display = 'inline-block';
             timerDisplay.style.display = 'inline-block';
-            comboDisplay.style.display = 'inline-block';
+            comboDisplay.style.display = 'block'; // 改為 block 以支援換行
 
             score = 0;
             wineBuff = false;
-            fireKillBuff = 0; // 初始化為 0
+            fireKillBuff = 0;
             ancientSwordDurability = 0;
             comboCount = 0;
             timeLeft = 60;
             gameActive = true;
             enemies.length = 0;
             caoAngs.length = 0;
+            tigers.length = 0;
+            zhuges.length = 0;
             items.length = 0;
             holes.length = 0;
+            boundTiger = null;
             generateHoles();
             scoreDisplay.textContent = `分數: ${score}`;
             updateBuffDisplay();
             updateComboDisplay();
             timerDisplay.textContent = `剩餘時間: ${Math.ceil(timeLeft)}`;
 
-            bgm.play();
+            bgm.play().catch(error => console.error("BGM play failed:", error));
 
             spawnInterval = setInterval(() => {
                 const enemyHoleIndex = spawnEnemy();
-                if (Math.random() < 0.30) spawnCaoAng(enemyHoleIndex);
+                if (Math.random() < 0.30) spawnOtherCharacter(enemyHoleIndex);
                 if (Math.random() < 0.20) spawnItem();
 
                 timeLeft -= 0.5;
@@ -622,6 +865,7 @@
             comboDisplay.style.display = 'none';
             nameInput.style.display = 'block';
             finalScoreDisplay.textContent = score;
+            boundTiger = null;
             bgm.pause();
             bgm.currentTime = 0;
         }
@@ -643,6 +887,7 @@
 
         // 顯示排行榜
         function showLeaderboard() {
+            console.log("Showing leaderboard...");
             menu.style.display = 'none';
             leaderboard.style.display = 'block';
             const leaderboardData = JSON.parse(localStorage.getItem('leaderboard') || '[]');
