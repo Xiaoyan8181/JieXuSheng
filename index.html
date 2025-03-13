@@ -142,7 +142,7 @@
         const boundary = { minX: 0, minY: 0, maxX: canvas.width, maxY: canvas.height };
 
         // 分數、BUFF 和 COMBO 狀態
-        let score = 0, wineBuff = false, fireKillBuff = false, ancientSwordDurability = 0,
+        let score = 0, wineBuff = false, fireKillBuff = 0, ancientSwordDurability = 0,
             comboCount = 0, timeLeft = 60, gameActive = false, spawnInterval;
 
         // 檢測是否為觸控裝置
@@ -207,8 +207,8 @@
                 y: hole.y + Math.sin(angle) * spawnDistance,
                 speed: 0,
                 maxSpeed: isLarge ? 1.25 : 2.5,
-                acceleration: 0.1, // 加速度降低
-                delay: 2000, // 延長起跑時間
+                acceleration: 0.1,
+                delay: 2000,
                 targetX: 0,
                 targetY: 0,
                 size: isLarge ? enemySize * 2 : enemySize,
@@ -241,8 +241,8 @@
                 y: hole.y + Math.sin(angle) * spawnDistance,
                 speed: 0,
                 maxSpeed: 2.5,
-                acceleration: 0.1, // 加速度降低
-                delay: 2000, // 延長起跑時間
+                acceleration: 0.1,
+                delay: 2000,
                 targetX: 0,
                 targetY: 0,
                 size: enemySize
@@ -304,16 +304,14 @@
                 const playerDy = player.y - enemy.y;
                 const playerDistance = Math.sqrt(playerDx * playerDx + playerDy * playerDy);
 
-                // 若主角靠近，沖兒轉彎
                 if (playerDistance < 150) {
                     const currentAngle = Math.atan2(dy, dx);
-                    const turnAngle = (Math.random() - 0.5) * 0.3; // 轉彎幅度加大
+                    const turnAngle = (Math.random() - 0.5) * 0.3;
                     const newAngle = currentAngle + turnAngle;
                     enemy.targetX = enemy.x + Math.cos(newAngle) * 1000;
                     enemy.targetY = enemy.y + Math.sin(newAngle) * 1000;
                 }
 
-                // 持續隨機轉彎
                 const slightTurn = (Math.random() - 0.5) * 0.05;
                 const currentAngle = Math.atan2(dy, dx);
                 const newAngle = currentAngle + slightTurn;
@@ -334,15 +332,15 @@
                         // 根據 BUFF 狀態播放音效
                         if (ancientSwordDurability > 0) {
                             new Audio(hitSound.src).play();
-                            if (fireKillBuff) new Audio(fireMinusTwoSound.src).play();
+                            if (fireKillBuff > 0) new Audio(fireMinusTwoSound.src).play();
                             else new Audio(minusTwoSound.src).play();
-                        } else if (wineBuff && fireKillBuff) {
+                        } else if (wineBuff && fireKillBuff > 0) {
                             new Audio(fireMinusTwoSound.src).play();
                             new Audio(hitSound.src).play();
                         } else if (wineBuff) {
                             new Audio(minusTwoSound.src).play();
                             new Audio(slaughterSound.src).play();
-                        } else if (fireKillBuff) {
+                        } else if (fireKillBuff > 0) {
                             new Audio(fireMinusTwoSound.src).play();
                             new Audio(slaughterSound.src).play();
                         } else {
@@ -350,12 +348,12 @@
                         }
 
                         let baseScore = enemy.isLarge ? 3 : 1;
-                        baseScore += (wineBuff ? 1 : 0) + (fireKillBuff ? 1 : 0);
+                        baseScore += (wineBuff ? 1 : 0) + (fireKillBuff > 0 ? 1 : 0);
                         let totalScore = ancientSwordDurability > 0 ? baseScore * 2 : baseScore;
                         totalScore += comboCount;
                         score += totalScore;
                         if (wineBuff) wineBuff = false;
-                        if (fireKillBuff) fireKillBuff = false;
+                        if (fireKillBuff > 0) fireKillBuff = Math.max(0, fireKillBuff - 1);
                         if (ancientSwordDurability > 0) ancientSwordDurability = Math.max(0, ancientSwordDurability - 5);
                         updateBuffDisplay();
                         updateComboDisplay();
@@ -398,7 +396,7 @@
                     sound.play();
                     comboCount = 0;
                     if (wineBuff) wineBuff = false;
-                    if (fireKillBuff) fireKillBuff = false;
+                    if (fireKillBuff > 0) fireKillBuff = Math.max(0, fireKillBuff - 1);
                     if (ancientSwordDurability > 0) ancientSwordDurability = Math.max(0, ancientSwordDurability - 5);
                     updateBuffDisplay();
                     updateComboDisplay();
@@ -421,7 +419,7 @@
                         const sound = new Audio(wineSound.src);
                         sound.play();
                     } else if (item.type === 'fireKill') {
-                        fireKillBuff = true;
+                        fireKillBuff += 2; // 火殺次數增加 2
                         const sound = new Audio(fireKillSound.src);
                         sound.play();
                     } else if (item.type === 'ancientSword') {
@@ -434,13 +432,13 @@
             }
         }
 
-        // 更新 BUFF 顯示
+        // 更新 BUFF 顯示（換行）
         function updateBuffDisplay() {
             let buffs = [];
             if (wineBuff) buffs.push('酒');
-            if (fireKillBuff) buffs.push('火殺');
+            if (fireKillBuff > 0) buffs.push(`火殺 (${fireKillBuff} 次)`);
             if (ancientSwordDurability > 0) buffs.push(`古錠刀 (${ancientSwordDurability}%)`);
-            buffsDisplay.textContent = `BUFF: ${buffs.length > 0 ? buffs.join(', ') : '無'}`;
+            buffsDisplay.innerHTML = buffs.length > 0 ? `BUFF:<br>${buffs.join('<br>')}` : 'BUFF: 無';
         }
 
         // 繪製遊戲畫面
@@ -585,7 +583,7 @@
 
             score = 0;
             wineBuff = false;
-            fireKillBuff = false;
+            fireKillBuff = 0; // 初始化為 0
             ancientSwordDurability = 0;
             comboCount = 0;
             timeLeft = 60;
