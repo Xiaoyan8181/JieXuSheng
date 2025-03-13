@@ -53,28 +53,37 @@
             text-align: center;
             margin-top: 20px;
         }
-        #instructions img {
-            display: block;
-            margin: 10px auto;
+        #instructions .entry {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #instructions .entry img {
             width: 80px;
             height: 80px;
+            margin-right: 20px;
         }
-        #instructions p {
+        #instructions .entry .text {
+            text-align: left;
+        }
+        #instructions .entry .text p {
             font-size: 18px;
-            margin: 5px 0;
+            margin: 0;
         }
-        #instructions .hp {
+        #instructions .entry .text .hp {
             font-size: 16px;
-            margin-top: -5px;
+            margin-top: 5px;
         }
-        #instructions .category {
+        #instructions .category, #instructions .item-category {
             font-size: 24px;
             margin: 20px 0;
         }
-        #instructions .item-category {
-            font-size: 24px;
-            margin: 20px 0;
-            animation: scalePulse 3s ease-in-out infinite;
+        #instructions .item-entry img {
+            animation: scalePulse 2s ease-in-out infinite; /* 道具圖片放大縮小 */
         }
         #baoAnimation {
             position: fixed;
@@ -97,8 +106,8 @@
             to { transform: rotate(360deg); }
         }
         @keyframes scalePulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            0%, 100% { transform: scale(0.8); } /* 改為 0.8 */
+            50% { transform: scale(1.2); } /* 改為 1.2 */
         }
     </style>
 </head>
@@ -112,7 +121,7 @@
 
     <div id="menu">
         <button onclick="startGame()">開始遊戲</button>
-        <button onclick="showLeaderboard()">本機排行榜</button>
+        <button onclick="showLeaderboard()">排行榜</button>
         <button onclick="showInstructions()">遊戲說明</button>
         <button onclick="window.close()">離開</button>
     </div>
@@ -129,31 +138,67 @@
     <div id="instructions">
         <h2>遊戲說明</h2>
         <p class="category">~角色類~</p>
-        <img src="./images/大寶.gif" alt="大寶">
-        <p>這是你! 你可以操控他追擊沖兒獲得積分!</p>
-        <img src="./images/沖兒.png" alt="沖兒">
-        <p>經典沖兒! 擊殺可獲得1積分!</p>
-        <p class="hp">HP2</p>
-        <img src="./images/沖兒.png" alt="大沖兒" style="width: 120px; height: 120px;">
-        <p>大沖兒: 較大的沖兒! 擊殺可獲得3積分!</p>
-        <p class="hp">HP5</p>
-        <img src="./images/曹昂.png" alt="曹昂">
-        <p>昂寶! 若想擊殺會被閃!</p>
-        <p class="hp">HP4</p>
-        <img src="./images/小虎.png" alt="小虎">
-        <p>小虎! 千萬別碰到她! 不然就要擊殺她才能觸碰其他人! 擊殺可獲得1積分!</p>
-        <p class="hp">HP10</p>
-        <img src="./images/謀諸葛.png" alt="謀諸葛">
-        <p>謀諸葛! 碰到會扣減積分!</p>
-        <p class="hp">HP50</p>
+        <div class="entry">
+            <img src="./images/大寶.gif" alt="大寶">
+            <div class="text">
+                <p>這是你! 你可以操控他追擊沖兒獲得積分!</p>
+            </div>
+        </div>
+        <div class="entry">
+            <img src="./images/沖兒.png" alt="沖兒">
+            <div class="text">
+                <p>經典沖兒! 擊殺可獲得1積分!</p>
+                <p class="hp">HP2</p>
+            </div>
+        </div>
+        <div class="entry">
+            <img src="./images/沖兒.png" alt="大沖兒" style="width: 120px; height: 120px;">
+            <div class="text">
+                <p>大沖兒: 較大的沖兒! 擊殺可獲得3積分!</p>
+                <p class="hp">HP5</p>
+            </div>
+        </div>
+        <div class="entry">
+            <img src="./images/曹昂.png" alt="曹昂">
+            <div class="text">
+                <p>昂寶! 若想擊殺會被閃!</p>
+                <p class="hp">HP4</p>
+            </div>
+        </div>
+        <div class="entry">
+            <img src="./images/小虎.png" alt="小虎">
+            <div class="text">
+                <p>小虎! 千萬別碰到她! 不然就要擊殺她才能觸碰其他人! 擊殺可獲得1積分!</p>
+                <p class="hp">HP10</p>
+            </div>
+        </div>
+        <div class="entry">
+            <img src="./images/謀諸葛.png" alt="謀諸葛">
+            <div class="text">
+                <p>謀諸葛! 碰到會扣減積分!</p>
+                <p class="hp">HP50</p>
+            </div>
+        </div>
         <p>COMBO數會加分 但昂寶和謀諸葛會斷COMBO!</p>
         <p class="item-category">~道具類~</p>
-        <img src="./images/酒.png" alt="酒">
-        <p>酒: 讓你下一次的傷害+1! 並且擊殺的積分+1!</p>
-        <img src="./images/火殺.png" alt="火殺">
-        <p>火殺: 獲得火焰附魔2次!(可疊加) 讓你傷害+1! 並且擊殺的積分+1!</p>
-        <img src="./images/古錠刀.png" alt="古錠刀">
-        <p>古錠刀: 獲得古錠刀! 讓你傷害翻倍! 並且擊殺的積分翻倍! 每次使用耐久-5%</p>
+        <div class="entry item-entry">
+            <img src="./images/酒.png" alt="酒">
+            <div class="text">
+                <p>酒: 讓你下一次的傷害+1! 並且擊殺的積分+1!</p>
+            </div>
+        </div>
+        <div class="entry item-entry">
+            <img src="./images/火殺.png" alt="火殺">
+            <div class="text">
+                <p>火殺: 獲得火焰附魔2次!(可疊加) 讓你傷害+1! 並且擊殺的積分+1!</p>
+            </div>
+        </div>
+        <div class="entry item-entry">
+            <img src="./images/古錠刀.png" alt="古錠刀">
+            <div class="text">
+                <p>古錠刀: 獲得古錠刀! 讓你傷害翻倍! 並且擊殺的積分翻倍! 每次使用耐久-5%</p>
+            </div>
+        </div>
         <button onclick="backToMenu()">返回</button>
     </div>
 
@@ -176,7 +221,6 @@
         const baoAnimation = document.getElementById('baoAnimation');
         const swordAnimation = document.getElementById('swordAnimation');
 
-        // 載入圖片和音效
         const playerImage = new Image(); playerImage.src = './images/大寶.gif';
         const enemyImage = new Image(); enemyImage.src = './images/沖兒.png';
         const caoAngImage = new Image(); caoAngImage.src = './images/曹昂.png';
@@ -200,31 +244,25 @@
         const fireMinusTwoSound = new Audio('./audio/火-2.mp3');
         bgm.loop = true;
 
-        // 主角物件
         const player = {
             x: 400, y: 400, speed: 0, maxSpeed: 8, acceleration: 0.1, deceleration: 0.1,
             targetX: 400, targetY: 400, size: 80, moving: false, facingRight: false,
             collisionCooldown: 0
         };
 
-        // 邊界範圍
         const boundary = { minX: 0, minY: 0, maxX: canvas.width, maxY: canvas.height };
 
-        // 分數、BUFF 和 COMBO 狀態
         let score = 0, wineBuff = false, fireKillBuff = 0, ancientSwordDurability = 0,
             comboCount = 0, timeLeft = 60, gameActive = false, spawnInterval,
             boundTiger = null;
 
-        // 檢測是否為觸控裝置
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-        // 洞、敵人、道具和碎片陣列
         const holes = [], holeRadius = 30;
         const enemies = [], caoAngs = [], tigers = [], zhuges = [], enemySize = 45;
         const items = [], itemSize = 45;
         const fragments = [];
 
-        // 計算攻擊力
         function calculateAttack() {
             let attack = 2;
             if (wineBuff) attack += 1;
@@ -233,7 +271,6 @@
             return attack;
         }
 
-        // 更新 COMBO 顯示
         function updateComboDisplay() {
             let comboText = `COMBO: ${comboCount}\n`;
             if (comboCount === 1) comboText += "一破 臥龍出山";
@@ -245,7 +282,6 @@
             comboDisplay.textContent = comboText;
         }
 
-        // 更新主角位置
         function updatePlayer() {
             const dx = player.targetX - player.x;
             const dy = player.targetY - player.y;
@@ -278,7 +314,6 @@
             if (player.collisionCooldown > 0) player.collisionCooldown -= 1000 / 60;
         }
 
-        // 生成敵人（沖兒）
         function spawnEnemy() {
             const holeIndex = Math.floor(Math.random() * holes.length);
             const hole = holes[holeIndex];
@@ -311,9 +346,8 @@
             return holeIndex;
         }
 
-        // 生成碎片（16 個碎片）
         function spawnFragments(x, y, size, facingRight, image) {
-            const fragmentCount = 16; // 修改為 16 個碎片
+            const fragmentCount = 16;
             for (let i = 0; i < fragmentCount; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const speed = Math.random() * 2 + 1;
@@ -333,13 +367,12 @@
             }
         }
 
-        // 更新碎片（減慢變小速度）
         function updateFragments() {
             for (let i = fragments.length - 1; i >= 0; i--) {
                 const fragment = fragments[i];
                 fragment.x += fragment.vx;
                 fragment.y += fragment.vy;
-                fragment.scale -= 0.015; // 減慢縮小速度，從 0.03 改為 0.015
+                fragment.scale -= 0.015;
                 fragment.rotation += fragment.rotationSpeed;
                 if (fragment.scale <= 0) {
                     fragments.splice(i, 1);
@@ -347,7 +380,6 @@
             }
         }
 
-        // 生成其他角色（曹昂、小虎、謀諸葛）
         function spawnOtherCharacter(excludeHoleIndex) {
             let holeIndex;
             do {
@@ -426,7 +458,6 @@
             }
         }
 
-        // 生成道具
         function spawnItem() {
             const rand = Math.random();
             let itemType, itemImage;
@@ -447,13 +478,11 @@
                 size: itemSize,
                 type: itemType,
                 image: itemImage,
-                rotation: 0,
                 scale: 1
             };
             items.push(item);
         }
 
-        // 更新敵人（沖兒）位置並添加轉彎邏輯
         function updateEnemies() {
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const enemy = enemies[i];
@@ -537,7 +566,6 @@
             }
         }
 
-        // 更新曹昂位置
         function updateCaoAngs() {
             for (let i = caoAngs.length - 1; i >= 0; i--) {
                 const caoAng = caoAngs[i];
@@ -582,7 +610,6 @@
             }
         }
 
-        // 更新小虎位置並添加碎片效果
         function updateTigers() {
             for (let i = tigers.length - 1; i >= 0; i--) {
                 const tiger = tigers[i];
@@ -669,7 +696,6 @@
             }
         }
 
-        // 更新謀諸葛位置
         function updateZhuges() {
             for (let i = zhuges.length - 1; i >= 0; i--) {
                 const zhuge = zhuges[i];
@@ -709,7 +735,6 @@
             }
         }
 
-        // 更新道具
         function updateItems() {
             for (let i = items.length - 1; i >= 0; i--) {
                 const item = items[i];
@@ -717,8 +742,8 @@
                 const dy = player.y - item.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
-                item.rotation += 0.05;
-                item.scale = 1 + 0.1 * Math.sin(Date.now() * 0.001);
+                // 移除旋轉，改用放大縮小
+                item.scale = 0.8 + 0.4 * (Math.sin(Date.now() * 0.001 * Math.PI) + 1) / 2; // 週期 2 秒，範圍 0.8-1.2
 
                 if (distance < (player.size + item.size * item.scale) / 2) {
                     items.splice(i, 1);
@@ -737,7 +762,6 @@
             }
         }
 
-        // 更新 BUFF 顯示
         function updateBuffDisplay() {
             let buffs = [];
             if (wineBuff) buffs.push('酒');
@@ -746,7 +770,6 @@
             buffsDisplay.innerHTML = buffs.length > 0 ? `BUFF:<br>${buffs.join('<br>')}` : 'BUFF: 無';
         }
 
-        // 繪製血條
         function drawHealthBar(x, y, size, hp, maxHp) {
             const barWidth = size;
             const barHeight = 5;
@@ -760,7 +783,6 @@
             ctx.fillRect(x - barWidth / 2, y + size / 2 + 5, healthWidth, barHeight);
         }
 
-        // 繪製遊戲畫面
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -781,7 +803,9 @@
                     if (item.image.complete) {
                         ctx.save();
                         ctx.translate(item.x, item.y);
-                        ctx.rotate(item.rotation);
+                        if (item.type === 'ancientSword') {
+                            ctx.rotate(Date.now() * 0.001 * Math.PI); // 古錠刀保持旋轉（週期 2 秒）
+                        }
                         ctx.scale(item.scale, item.scale);
                         ctx.drawImage(item.image, -item.size / 2, -item.size / 2, item.size, item.size);
                         ctx.restore();
@@ -875,7 +899,6 @@
             }
         }
 
-        // 遊戲主迴圈
         function gameLoop() {
             if (gameActive) {
                 updatePlayer();
@@ -895,7 +918,6 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // 隨機生成不重疊的洞
         function generateHoles() {
             const centerArea = { minX: 250, maxX: 550, minY: 250, maxY: 550 };
             while (holes.length < 3) {
@@ -917,7 +939,6 @@
             }
         }
 
-        // 滑鼠移動事件（PC）
         if (!isTouchDevice) {
             canvas.addEventListener('mousemove', (event) => {
                 if (!gameActive) return;
@@ -927,7 +948,6 @@
             });
         }
 
-        // 觸控事件（手機）
         if (isTouchDevice) {
             canvas.addEventListener('touchstart', (event) => {
                 if (!gameActive) return;
@@ -949,7 +969,6 @@
             });
         }
 
-        // 開始遊戲
         function startGame() {
             console.log("Starting game...");
             menu.style.display = 'none';
@@ -993,7 +1012,6 @@
             }, 500);
         }
 
-        // 結束遊戲
         function endGame() {
             gameActive = false;
             clearInterval(spawnInterval);
@@ -1009,7 +1027,6 @@
             bgm.currentTime = 0;
         }
 
-        // 儲存分數到排行榜
         function saveScore() {
             const name = document.getElementById('playerName').value.trim();
             if (!name) return alert('請輸入名稱！');
@@ -1024,7 +1041,6 @@
             showLeaderboard();
         }
 
-        // 顯示排行榜
         function showLeaderboard() {
             console.log("Showing leaderboard...");
             menu.style.display = 'none';
@@ -1037,7 +1053,6 @@
             swordAnimation.style.display = 'block';
         }
 
-        // 顯示遊戲說明
         function showInstructions() {
             console.log("Showing instructions...");
             menu.style.display = 'none';
@@ -1046,7 +1061,6 @@
             swordAnimation.style.display = 'block';
         }
 
-        // 返回主選單
         function backToMenu() {
             leaderboard.style.display = 'none';
             instructions.style.display = 'none';
@@ -1055,7 +1069,6 @@
             swordAnimation.style.display = 'block';
         }
 
-        // 初始化並啟動遊戲主迴圈
         gameLoop();
     </script>
 </body>
