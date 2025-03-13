@@ -239,6 +239,8 @@
         const tigerSound = new Audio('./audio/先殺我吧.mp3');
         const zhugeSound = new Audio('./audio/知汝欲行此技.mp3');
         const bgm = new Audio('./audio/BGM.mp3');
+	const themeMusic = new Audio('./audio/Theme.mp3');
+	themeMusic.loop = true;
         const minusOneSound = new Audio('./audio/-1.mp3');
         const minusTwoSound = new Audio('./audio/-2.mp3');
         const fireMinusTwoSound = new Audio('./audio/火-2.mp3');
@@ -969,64 +971,67 @@
             });
         }
 
-        function startGame() {
-            console.log("Starting game...");
-            menu.style.display = 'none';
-            canvas.style.display = 'block';
-            scoreDisplay.style.display = 'inline-block';
-            buffsDisplay.style.display = 'inline-block';
-            timerDisplay.style.display = 'inline-block';
-            comboDisplay.style.display = 'block';
+function startGame() {
+    console.log("Starting game...");
+    menu.style.display = 'none';
+    canvas.style.display = 'block';
+    scoreDisplay.style.display = 'inline-block';
+    buffsDisplay.style.display = 'inline-block';
+    timerDisplay.style.display = 'inline-block';
+    comboDisplay.style.display = 'block';
 
-            score = 0;
-            wineBuff = false;
-            fireKillBuff = 0;
-            ancientSwordDurability = 0;
-            comboCount = 0;
-            timeLeft = 60;
-            gameActive = true;
-            enemies.length = 0;
-            caoAngs.length = 0;
-            tigers.length = 0;
-            zhuges.length = 0;
-            items.length = 0;
-            fragments.length = 0;
-            holes.length = 0;
-            boundTiger = null;
-            generateHoles();
-            scoreDisplay.textContent = `分數: ${score}`;
-            updateBuffDisplay();
-            updateComboDisplay();
-            timerDisplay.textContent = `剩餘時間: ${Math.ceil(timeLeft)}`;
+    themeMusic.pause(); // 停止主題音樂
+    themeMusic.currentTime = 0; // 重置播放位置
 
-            bgm.play().catch(error => console.error("BGM play failed:", error));
+    score = 0;
+    wineBuff = false;
+    fireKillBuff = 0;
+    ancientSwordDurability = 0;
+    comboCount = 0;
+    timeLeft = 60;
+    gameActive = true;
+    enemies.length = 0;
+    caoAngs.length = 0;
+    tigers.length = 0;
+    zhuges.length = 0;
+    items.length = 0;
+    fragments.length = 0;
+    holes.length = 0;
+    boundTiger = null;
+    generateHoles();
+    scoreDisplay.textContent = `分數: ${score}`;
+    updateBuffDisplay();
+    updateComboDisplay();
+    timerDisplay.textContent = `剩餘時間: ${Math.ceil(timeLeft)}`;
 
-            spawnInterval = setInterval(() => {
-                const enemyHoleIndex = spawnEnemy();
-                if (Math.random() < 0.30) spawnOtherCharacter(enemyHoleIndex);
-                if (Math.random() < 0.20) spawnItem();
+    bgm.play().catch(error => console.error("BGM play failed:", error));
 
-                timeLeft -= 0.5;
-                timerDisplay.textContent = `剩餘時間: ${Math.ceil(timeLeft)}`;
-                if (timeLeft <= 0) endGame();
-            }, 500);
-        }
+    spawnInterval = setInterval(() => {
+        const enemyHoleIndex = spawnEnemy();
+        if (Math.random() < 0.30) spawnOtherCharacter(enemyHoleIndex);
+        if (Math.random() < 0.20) spawnItem();
 
-        function endGame() {
-            gameActive = false;
-            clearInterval(spawnInterval);
-            canvas.style.display = 'none';
-            scoreDisplay.style.display = 'none';
-            buffsDisplay.style.display = 'none';
-            timerDisplay.style.display = 'none';
-            comboDisplay.style.display = 'none';
-            nameInput.style.display = 'block';
-            finalScoreDisplay.textContent = score;
-            boundTiger = null;
-            bgm.pause();
-            bgm.currentTime = 0;
-        }
+        timeLeft -= 0.5;
+        timerDisplay.textContent = `剩餘時間: ${Math.ceil(timeLeft)}`;
+        if (timeLeft <= 0) endGame();
+    }, 500);
+}
+function endGame() {
+    gameActive = false;
+    clearInterval(spawnInterval);
+    canvas.style.display = 'none';
+    scoreDisplay.style.display = 'none';
+    buffsDisplay.style.display = 'none';
+    timerDisplay.style.display = 'none';
+    comboDisplay.style.display = 'none';
+    nameInput.style.display = 'block';
+    finalScoreDisplay.textContent = score;
+    boundTiger = null;
+    bgm.pause();
+    bgm.currentTime = 0;
 
+    themeMusic.play().catch(error => console.error("Theme music play failed:", error)); // 遊戲結束時播放主題音樂
+}
         function saveScore() {
             const name = document.getElementById('playerName').value.trim();
             if (!name) return alert('請輸入名稱！');
@@ -1041,35 +1046,46 @@
             showLeaderboard();
         }
 
-        function showLeaderboard() {
-            console.log("Showing leaderboard...");
-            menu.style.display = 'none';
-            leaderboard.style.display = 'block';
-            const leaderboardData = JSON.parse(localStorage.getItem('leaderboard') || '[]');
-            leaderboardList.innerHTML = leaderboardData.length > 0
-                ? leaderboardData.map((entry, index) => `${index + 1}. ${entry.name}: ${entry.score}`).join('<br>')
-                : '尚無紀錄';
-            baoAnimation.style.display = 'block';
-            swordAnimation.style.display = 'block';
-        }
+function showLeaderboard() {
+    console.log("Showing leaderboard...");
+    menu.style.display = 'none';
+    leaderboard.style.display = 'block';
+    const leaderboardData = JSON.parse(localStorage.getItem('leaderboard') || '[]');
+    leaderboardList.innerHTML = leaderboardData.length > 0
+        ? leaderboardData.map((entry, index) => `${index + 1}. ${entry.name}: ${entry.score}`).join('<br>')
+        : '尚無紀錄';
+    baoAnimation.style.display = 'block';
+    swordAnimation.style.display = 'block';
+}
+function showInstructions() {
+    console.log("Showing instructions...");
+    menu.style.display = 'none';
+    instructions.style.display = 'block';
+    baoAnimation.style.display = 'block';
+    swordAnimation.style.display = 'block';
 
-        function showInstructions() {
-            console.log("Showing instructions...");
-            menu.style.display = 'none';
-            instructions.style.display = 'block';
-            baoAnimation.style.display = 'block';
-            swordAnimation.style.display = 'block';
-        }
+}
+function backToMenu() {
+    leaderboard.style.display = 'none';
+    instructions.style.display = 'none';
+    menu.style.display = 'block';
+    baoAnimation.style.display = 'block';
+    swordAnimation.style.display = 'block';
+    // 移除 themeMusic.play()
+}
 
-        function backToMenu() {
-            leaderboard.style.display = 'none';
-            instructions.style.display = 'none';
-            menu.style.display = 'block';
-            baoAnimation.style.display = 'block';
-            swordAnimation.style.display = 'block';
-        }
 
-        gameLoop();
-    </script>
-</body>
+
+document.body.addEventListener('click', () => {
+    if (!themeMusic.playing) { // 檢查是否已在播放，避免重複啟動
+        themeMusic.play().then(() => {
+            console.log("Theme music started after user interaction");
+        }).catch(error => {
+            console.error("Theme music failed after interaction:", error);
+        });
+    }
+}, { once: true });
+gameLoop();
+themeMusic.play().catch(error => console.error("錯誤", error)); // 頁面載入時播放
+    </script></body>
 </html>
