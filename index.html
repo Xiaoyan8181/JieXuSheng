@@ -74,7 +74,7 @@
         #instructions .item-category {
             font-size: 24px;
             margin: 20px 0;
-            animation: scalePulse 3s ease-in-out infinite; /* 道具類放大縮小效果 */
+            animation: scalePulse 3s ease-in-out infinite;
         }
         #baoAnimation {
             position: fixed;
@@ -112,7 +112,7 @@
 
     <div id="menu">
         <button onclick="startGame()">開始遊戲</button>
-        <button onclick="showLeaderboard()">本機排行榜</button>
+        <button onclick="showLeaderboard()">排行榜</button>
         <button onclick="showInstructions()">遊戲說明</button>
         <button onclick="window.close()">離開</button>
     </div>
@@ -218,10 +218,11 @@
         // 檢測是否為觸控裝置
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-        // 洞、敵人和道具陣列
+        // 洞、敵人、道具和碎片陣列
         const holes = [], holeRadius = 30;
         const enemies = [], caoAngs = [], tigers = [], zhuges = [], enemySize = 45;
         const items = [], itemSize = 45;
+        const fragments = [];
 
         // 計算攻擊力
         function calculateAttack() {
@@ -298,7 +299,7 @@
                 hp: isLarge ? 5 : 2,
                 maxHp: isLarge ? 5 : 2,
                 isLarge: isLarge,
-                facingRight: false // 新增方向屬性
+                facingRight: false
             };
 
             const escapeAngle = Math.random() * Math.PI * 2;
@@ -308,6 +309,42 @@
 
             enemies.push(enemy);
             return holeIndex;
+        }
+
+        // 生成碎片（16 個碎片）
+        function spawnFragments(x, y, size, facingRight, image) {
+            const fragmentCount = 16; // 修改為 16 個碎片
+            for (let i = 0; i < fragmentCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 2 + 1;
+                const rotationSpeed = (Math.random() - 0.5) * 0.2;
+                fragments.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: size / 4,
+                    scale: 1,
+                    rotation: 0,
+                    rotationSpeed: rotationSpeed,
+                    facingRight: facingRight,
+                    image: image
+                });
+            }
+        }
+
+        // 更新碎片（減慢變小速度）
+        function updateFragments() {
+            for (let i = fragments.length - 1; i >= 0; i--) {
+                const fragment = fragments[i];
+                fragment.x += fragment.vx;
+                fragment.y += fragment.vy;
+                fragment.scale -= 0.015; // 減慢縮小速度，從 0.03 改為 0.015
+                fragment.rotation += fragment.rotationSpeed;
+                if (fragment.scale <= 0) {
+                    fragments.splice(i, 1);
+                }
+            }
         }
 
         // 生成其他角色（曹昂、小虎、謀諸葛）
@@ -411,7 +448,7 @@
                 type: itemType,
                 image: itemImage,
                 rotation: 0,
-                scale: 1 // 新增縮放屬性
+                scale: 1
             };
             items.push(item);
         }
@@ -463,6 +500,7 @@
                     enemy.hp -= calculateAttack();
                     player.collisionCooldown = 500;
                     if (enemy.hp <= 0) {
+                        spawnFragments(enemy.x, enemy.y, enemy.size, enemy.facingRight, enemyImage);
                         enemies.splice(i, 1);
                         comboCount++;
 
@@ -544,7 +582,7 @@
             }
         }
 
-        // 更新小虎位置
+        // 更新小虎位置並添加碎片效果
         function updateTigers() {
             for (let i = tigers.length - 1; i >= 0; i--) {
                 const tiger = tigers[i];
@@ -587,6 +625,7 @@
                         }
 
                         if (tiger.hp <= 0) {
+                            spawnFragments(tiger.x, tiger.y, tiger.size, tiger.facingRight, tigerImage);
                             tigers.splice(i, 1);
                             if (boundTiger === tiger) boundTiger = null;
                             comboCount++;
@@ -679,7 +718,7 @@
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
                 item.rotation += 0.05;
-                item.scale = 1 + 0.1 * Math.sin(Date.now() * 0.001); // 緩慢放大縮小效果
+                item.scale = 1 + 0.1 * Math.sin(Date.now() * 0.001);
 
                 if (distance < (player.size + item.size * item.scale) / 2) {
                     items.splice(i, 1);
@@ -743,7 +782,7 @@
                         ctx.save();
                         ctx.translate(item.x, item.y);
                         ctx.rotate(item.rotation);
-                        ctx.scale(item.scale, item.scale); // 應用縮放
+                        ctx.scale(item.scale, item.scale);
                         ctx.drawImage(item.image, -item.size / 2, -item.size / 2, item.size, item.size);
                         ctx.restore();
                     } else {
@@ -756,7 +795,7 @@
                     if (enemyImage.complete) {
                         ctx.save();
                         ctx.translate(enemy.x, enemy.y);
-                        if (enemy.facingRight) ctx.scale(-1, 1); // 左右翻轉
+                        if (enemy.facingRight) ctx.scale(-1, 1);
                         ctx.drawImage(enemyImage, -enemy.size / 2, -enemy.size / 2, enemy.size, enemy.size);
                         ctx.restore();
                     } else {
@@ -764,6 +803,18 @@
                         ctx.fillRect(enemy.x - enemy.size / 2, enemy.y - enemy.size / 2, enemy.size, enemy.size);
                     }
                     drawHealthBar(enemy.x, enemy.y, enemy.size, enemy.hp, enemy.maxHp);
+                }
+
+                for (const fragment of fragments) {
+                    if (fragment.image.complete) {
+                        ctx.save();
+                        ctx.translate(fragment.x, fragment.y);
+                        if (fragment.facingRight) ctx.scale(-1, 1);
+                        ctx.rotate(fragment.rotation);
+                        ctx.scale(fragment.scale, fragment.scale);
+                        ctx.drawImage(fragment.image, -fragment.size / 2, -fragment.size / 2, fragment.size, fragment.size);
+                        ctx.restore();
+                    }
                 }
 
                 for (const caoAng of caoAngs) {
@@ -833,6 +884,7 @@
                 updateTigers();
                 updateZhuges();
                 updateItems();
+                updateFragments();
                 baoAnimation.style.display = 'none';
                 swordAnimation.style.display = 'none';
             } else {
@@ -919,6 +971,7 @@
             tigers.length = 0;
             zhuges.length = 0;
             items.length = 0;
+            fragments.length = 0;
             holes.length = 0;
             boundTiger = null;
             generateHoles();
